@@ -1,211 +1,256 @@
-import streamlit as st
-import time
 import os
-import base64
+import time
+import streamlit as st
 
-st.set_page_config(page_title="General Math Escape Room", page_icon="🔒", layout="centered")
+# Page Configuration
+st.set_page_config(
+    page_title="Over the Borderline: Domain and Range",
+    layout="wide"
+)
 
-# --- AUDIO EMBEDDER ---
-def load_bgm():
-    audio_file = "bgm.mp3"
-    if not os.path.exists(audio_file) and os.path.exists("bgm.mp3.mp3"):
-        audio_file = "bgm.mp3.mp3"
+# Custom Cyberpunk/Arcade Theme Styling
+st.markdown("""
+<style>
+    /* Dark grid background */
+    .stApp {
+        background: linear-gradient(135deg, #0f0c29, #1a103c, #24243e);
+        color: #ffffff;
+        font-family: 'Poppins', sans-serif;
+    }
+    
+    /* Glowing Title Header Card */
+    .title-banner {
+        text-align: center;
+        padding: 25px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 16px;
+        border: 2px solid #00ffcc;
+        box-shadow: 0 0 25px rgba(0, 255, 204, 0.25);
+        margin-bottom: 30px;
+    }
+    
+    .main-title {
+        font-size: 3rem;
+        font-weight: 900;
+        letter-spacing: 2px;
+        background: linear-gradient(90deg, #ff007f, #00ffcc);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+    }
+    
+    .sub-title {
+        font-size: 1.3rem;
+        color: #d1d5db;
+        letter-spacing: 3px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
 
-    if os.path.exists(audio_file):
-        with open(audio_file, "rb") as f:
-            data = f.read()
-            b64 = base64.b64encode(data).decode()
-            st.markdown(
-                f"""
-                <audio autoplay loop style="display:none;">
-                    <source src="data:audio/mp3;base64,{b64}" type="audio/mp3">
-                </audio>
-                """,
-                unsafe_allow_html=True
-            )
+    /* Question Cards */
+    div[data-testid="stVerticalBlock"] > div {
+        background-color: rgba(255, 255, 255, 0.05);
+        padding: 18px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
 
-# --- QUESTION BANK ---
-ROOM_1_QUESTIONS = [
-    {"level": "Easy (1/20)", "question": "What is a set of ordered pairs (x, y) called?", "options": ["A) Relation", "B) Function", "C) Asymptote", "D) Domain"], "answer": "A", "explanation": "A relation is simply any set of ordered pairs (x, y)."},
-    {"level": "Easy (2/20)", "question": "In a relation, what is the set of all second components (y-values)?", "options": ["A) Domain", "B) Range", "C) Input", "D) Slope"], "answer": "B", "explanation": "Range refers strictly to the set of output y-values."},
-    {"level": "Easy (3/20)", "question": "Which core rule defines a function?", "options": ["A) Every y-value has two x-values", "B) Every x-value is paired with EXACTLY ONE y-value", "C) All x-values must equal zero", "D) The graph must be a straight line"], "answer": "B", "explanation": "A relation is a function if and only if each input x has a unique output y."},
-    {"level": "Easy (4/20)", "question": "Which graphical test determines if a drawn curve is a function?", "options": ["A) Horizontal Line Test", "B) Vertical Line Test", "C) Diagonal Test", "D) Circle Test"], "answer": "B", "explanation": "If a vertical line crosses a graph in more than one point, it fails the function test."},
-    {"level": "Easy (5/20)", "question": "Which type of correspondence is ALWAYS a valid function?", "options": ["A) One-to-Many", "B) Many-to-One", "C) One-to-All", "D) Many-to-Many"], "answer": "B", "explanation": "Many-to-one (e.g., y = x^2) is a valid function because each x still yields only one y."},
-    {"level": "Medium (6/20)", "question": "Is S = {(1, 2), (2, 3), (3, 4), (4, 5)} a function?", "options": ["A) Yes, all x-values are unique", "B) No, numbers are increasing", "C) No, y-values repeat", "D) It is an equation, not a relation"], "answer": "A", "explanation": "No x-value repeats, so every input has exactly one output."},
-    {"level": "Medium (7/20)", "question": "Is R = {(2, 5), (2, 6), (3, 7)} a function?", "options": ["A) Yes", "B) No, the input 2 maps to both 5 and 6", "C) Yes, because 3 maps to 7", "D) No, range values are wrong"], "answer": "B", "explanation": "The input x = 2 has two different outputs (5 and 6), breaking the function rule."},
-    {"level": "Medium (8/20)", "question": "Which mapping correspondence is NEVER a function?", "options": ["A) One-to-One", "B) Many-to-One", "C) One-to-Many", "D) Constant mapping"], "answer": "C", "explanation": "One-to-many assigns a single input to multiple outputs."},
-    {"level": "Medium (9/20)", "question": "Does the set T = {(1, 4), (2, 4), (3, 4)} represent a function?", "options": ["A) Yes, it is a constant function (Many-to-One)", "B) No, y = 4 repeats", "C) No, x-values must be identical", "D) It is an undefined relation"], "answer": "A", "explanation": "Multiple x-values can output the same y-value without breaking function rules."},
-    {"level": "Medium (10/20)", "question": "Does the line y = 3x + 2 represent y as a function of x?", "options": ["A) Yes, every x gives one unique y", "B) No, it has a slope", "C) No, x can yield two outputs", "D) Only if x > 0"], "answer": "A", "explanation": "All non-vertical linear equations are valid functions."},
-    {"level": "Hard (11/20)", "question": "Does y = x^2 + 3 represent y as a function of x?", "options": ["A) Yes", "B) No, x is squared", "C) No, it yields +/- values", "D) Only for negative x"], "answer": "A", "explanation": "Squaring x gives one unique result for any single value of x."},
-    {"level": "Hard (12/20)", "question": "Does x = y^2 represent y as a function of x?", "options": ["A) Yes", "B) No, solving for y gives y = +/- sqrt(x) (two outputs for one input)", "C) Yes, if x is negative", "D) Only if y = 0"], "answer": "B", "explanation": "An even exponent on y means one x-value yields two y-values (e.g., x = 4 gives y = 2 and y = -2)."},
-    {"level": "Hard (13/20)", "question": "Which of the following equations fails to represent a function?", "options": ["A) y = |x|", "B) x^2 + y^2 = 25", "C) y = 1/x", "D) y = x^3"], "answer": "B", "explanation": "x^2 + y^2 = 25 represents a circle, which fails the Vertical Line Test."},
-    {"level": "Hard (14/20)", "question": "Which rule correctly relates functions and relations?", "options": ["A) All relations are functions", "B) All functions are relations, but not all relations are functions", "C) Functions have no domain", "D) Relations are always linear"], "answer": "B", "explanation": "Functions are a specific restricted subset of all relations."},
-    {"level": "Hard (15/20)", "question": "Is y = |x - 2| a function of x?", "options": ["A) Yes, absolute value yields a single clear output for every input", "B) No, absolute value makes two outputs", "C) Only when x > 2", "D) No, it forms a vertical line"], "answer": "A", "explanation": "Every input x produces exactly one non-negative output y."},
-    {"level": "Master (16/20)", "question": "If f(x) = 3x - 5, what is the value of f(4)?", "options": ["A) 7", "B) 12", "C) 17", "D) -1"], "answer": "A", "explanation": "f(4) = 3(4) - 5 = 12 - 5 = 7."},
-    {"level": "Master (17/20)", "question": "If f(x) = x^2 - 2x, evaluate f(-3):", "options": ["A) 3", "B) 15", "C) -3", "D) 21"], "answer": "B", "explanation": "f(-3) = (-3)^2 - 2(-3) = 9 + 6 = 15."},
-    {"level": "Master (18/20)", "question": "A vending machine button dispensing a random drink each time is an analogy for a:", "options": ["A) Valid Function", "B) One-to-Many Relation (Not a Function)", "C) Linear Model", "D) Constant Function"], "answer": "B", "explanation": "One input giving multiple unpredictable outputs violates the function rule."},
-    {"level": "Master (19/20)", "question": "Given f(x) = 2x + 1 and g(x) = x^2, find the composite value f(g(3)):", "options": ["A) 19", "B) 49", "C) 13", "D) 37"], "answer": "A", "explanation": "g(3) = 3^2 = 9. Then f(9) = 2(9) + 1 = 19."},
-    {"level": "Master (20/20)", "question": "Why is the vertical line x = 4 NOT a function?", "options": ["A) It has zero slope", "B) The single input x = 4 maps to infinitely many y-values", "C) It has no y-intercept", "D) Its domain is all real numbers"], "answer": "B", "explanation": "An infinite set of points share x = 4, failing the function definition completely."}
-]
+    /* Interactive Buttons */
+    .stButton > button {
+        background: linear-gradient(90deg, #ff007f, #7928ca);
+        color: white;
+        font-size: 1rem;
+        font-weight: bold;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 24px;
+        box-shadow: 0 0 12px rgba(255, 0, 127, 0.4);
+        transition: all 0.3s ease;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 0 22px rgba(0, 255, 204, 0.8);
+    }
+</style>
+""", unsafe_allow_html=True)
 
-ROOM_2_QUESTIONS = [
-    {"level": "Easy (1/20)", "question": "A function forming a straight line with constant slope y = mx + b is a:", "options": ["A) Linear Function", "B) Quadratic Function", "C) Exponential Function", "D) Rational Function"], "answer": "A", "explanation": "Linear functions have a constant rate of change and straight-line graphs."},
-    {"level": "Easy (2/20)", "question": "A U-shaped curve graph defined by y = ax^2 + bx + c is a:", "options": ["A) Linear Function", "B) Quadratic Function (Parabola)", "C) Logarithmic Function", "D) Step Function"], "answer": "B", "explanation": "Quadratic equations graph as parabolic U-shapes."},
-    {"level": "Easy (3/20)", "question": "A function where the variable x is in the exponent (y = a * b^x) is an:", "options": ["A) Exponential Function", "B) Polynomial Function", "C) Absolute Value Function", "D) Radical Function"], "answer": "A", "explanation": "Variables placed in exponents define exponential functions."},
-    {"level": "Easy (4/20)", "question": "A function defined by different formulas for different sub-domains is a:", "options": ["A) Piecewise Function", "B) Constant Function", "C) Linear Function", "D) Identity Function"], "answer": "A", "explanation": "Piecewise functions apply different operational rules across different intervals."},
-    {"level": "Easy (5/20)", "question": "A fraction composed of two polynomials f(x) = P(x) / Q(x) is a:", "options": ["A) Rational Function", "B) Irrational Function", "C) Exponential Function", "D) Quadratic Function"], "answer": "A", "explanation": "Ratios of polynomials form rational functions."},
-    {"level": "Medium (6/20)", "question": "Fake news doubling every hour during a crisis represents which model?", "options": ["A) Linear Growth", "B) Exponential Growth", "C) Quadratic Growth", "D) Logarithmic Growth"], "answer": "B", "explanation": "Doubling at fixed intervals represents exponential growth."},
-    {"level": "Medium (7/20)", "question": "The trajectory of a thrown ball rising and falling under gravity models a:", "options": ["A) Linear Function", "B) Quadratic Function", "C) Rational Function", "D) Exponential Function"], "answer": "B", "explanation": "Gravity causes parabolic projectile paths modeled by quadratics."},
-    {"level": "Medium (8/20)", "question": "A taxi charging Php 40 base pay plus Php 15 for every kilometer traveled is modeled by a:", "options": ["A) Linear Function", "B) Exponential Function", "C) Reciprocal Function", "D) Absolute Value Function"], "answer": "A", "explanation": "Constant increase per kilometer forms a linear equation: y = 15x + 40."},
-    {"level": "Medium (9/20)", "question": "What is the term for a line that a graph continuously approaches but never touches?", "options": ["A) Slope", "B) Asymptote", "C) Vertex", "D) Intercept"], "answer": "B", "explanation": "Asymptotes act as boundary lines for functions (e.g. rational functions)."},
-    {"level": "Medium (10/20)", "question": "Income tax tiers (0% for low income, 15% for middle, 25% for high) are modeled by a:", "options": ["A) Piecewise Function", "B) Linear Function", "C) Logarithmic Function", "D) Quadratic Function"], "answer": "A", "explanation": "Tax brackets switch rules at explicit income thresholds (piecewise)."},
-    {"level": "Hard (11/20)", "question": "Splitting Php 1,000,000 aid equally among x disaster victims (y = 1,000,000/x) is a:", "options": ["A) Rational / Reciprocal Function", "B) Quadratic Function", "C) Linear Function", "D) Exponential Function"], "answer": "A", "explanation": "y = k/x is a reciprocal rational function where payout decreases as x increases."},
-    {"level": "Hard (12/20)", "question": "Sound intensity in decibels or earthquake Richter scales exhibiting diminishing returns are modeled by:", "options": ["A) Exponential Functions", "B) Logarithmic Functions", "C) Linear Functions", "D) Quadratic Functions"], "answer": "B", "explanation": "Logarithmic functions grow rapidly at first and then flatten out."},
-    {"level": "Hard (13/20)", "question": "Parking garage fees charging full rate per integer hour step is a:", "options": ["A) Greatest Integer (Floor) Function", "B) Linear Function", "C) Exponential Function", "D) Quadratic Function"], "answer": "A", "explanation": "Step functions jump at integer value boundaries."},
-    {"level": "Hard (14/20)", "question": "What is the horizontal asymptote of f(x) = (1/x) + 4?", "options": ["A) y = 0", "B) y = 4", "C) x = 0", "D) x = 4"], "answer": "B", "explanation": "As x approaches infinity, 1/x approaches 0, leaving y = 4."},
-    {"level": "Hard (15/20)", "question": "What is the vertical asymptote of f(x) = 3 / (x - 2)?", "options": ["A) x = 2", "B) x = -2", "C) y = 3", "D) y = 0"], "answer": "A", "explanation": "Setting denominator x - 2 = 0 yields vertical asymptote x = 2."},
-    {"level": "Master (16/20)", "question": "Total Cost C(x) = 50x + 2000. What function type represents Average Cost A(x) = C(x)/x?", "options": ["A) Linear Function", "B) Rational Function", "C) Exponential Function", "D) Quadratic Function"], "answer": "B", "explanation": "A(x) = 50 + (2000/x) is a rational function."},
-    {"level": "Master (17/20)", "question": "Half-life decay of radioactive waste N(t) = N_0(0.5)^t is an example of:", "options": ["A) Exponential Decay", "B) Linear Depreciation", "C) Logarithmic Decay", "D) Quadratic Falloff"], "answer": "A", "explanation": "Base between 0 and 1 (0.5) represents exponential decay."},
-    {"level": "Master (18/20)", "question": "For projectile height h(t) = -16t^2 + 64t + 80, the maximum height occurs at the parabola's:", "options": ["A) Y-intercept", "B) Vertex (t = -b / 2a)", "C) Asymptote", "D) X-intercept"], "answer": "B", "explanation": "The vertex t = -64 / (2 * -16) = 2 seconds gives the maximum peak height."},
-    {"level": "Master (19/20)", "question": "Why does f(x) = (x^2 - 4) / (x - 2) have a removable hole at x = 2 rather than a vertical asymptote?", "options": ["A) The factor (x - 2) cancels out in numerator and denominator", "B) It is a linear function", "C) The numerator is zero", "D) It has no domain restriction"], "answer": "A", "explanation": "(x^2-4)/(x-2) = (x-2)(x+2)/(x-2) = x+2 for x != 2, creating a hole at (2, 4)."},
-    {"level": "Master (20/20)", "question": "Given piecewise f(x) = { 2x + 1 for x < 3 ; x^2 - 2 for x >= 3 }, evaluate f(3):", "options": ["A) 7", "B) 9", "C) 5", "D) 11"], "answer": "A", "explanation": "At x = 3, use second rule (x >= 3): f(3) = 3^2 - 2 = 7."}
-]
-
-ROOM_3_QUESTIONS = [
-    {"level": "Easy (1/20)", "question": "What does the DOMAIN of a function represent?", "options": ["A) All valid input x-values", "B) All output y-values", "C) The y-intercept", "D) The graph slope"], "answer": "A", "explanation": "Domain is the complete set of input x-values."},
-    {"level": "Easy (2/20)", "question": "What does the RANGE of a function represent?", "options": ["A) All valid input x-values", "B) All resulting output y-values", "C) The x-intercept", "D) The vertical asymptote"], "answer": "B", "explanation": "Range is the set of output y-values."},
-    {"level": "Easy (3/20)", "question": "In interval notation, which symbol indicates an EXCLUDED endpoint?", "options": ["A) Square bracket [ ]", "B) Parenthesis ( )", "C) Curly brace { }", "D) Angle bracket < >"], "answer": "B", "explanation": "Parentheses ( ) mean the boundary value is excluded."},
-    {"level": "Easy (4/20)", "question": "What is the DOMAIN of A = {(1, 5), (2, 6), (3, 7)}?", "options": ["A) {5, 6, 7}", "B) {1, 2, 3}", "C) {1, 2, 3, 5, 6, 7}", "D) (1, 3)"], "answer": "B", "explanation": "Domain consists of x-coordinates: {1, 2, 3}."},
-    {"level": "Easy (5/20)", "question": "What is the RANGE of B = {(4, 10), (5, 10), (6, 12)}?", "options": ["A) {4, 5, 6}", "B) {10, 12}", "C) {4, 5, 6, 10, 12}", "D) [10, 12]"], "answer": "B", "explanation": "Range consists of unique y-coordinates: {10, 12}."},
-    {"level": "Medium (6/20)", "question": "What is the domain of any standard linear polynomial function f(x) = 4x - 9?", "options": ["A) [0, inf)", "B) All real numbers (-inf, inf)", "C) x != 0", "D) (0, inf)"], "answer": "B", "explanation": "Polynomials have no division or radicals, so domain is (-inf, inf)."},
-    {"level": "Medium (7/20)", "question": "What is the range of constant function f(x) = 5?", "options": ["A) (-inf, inf)", "B) {5}", "C) [5, inf)", "D) x != 5"], "answer": "B", "explanation": "Output is always 5, so range is single value set {5}."},
-    {"level": "Medium (8/20)", "question": "Express 'x is greater than or equal to 3' in interval notation:", "options": ["A) (3, inf)", "B) [3, inf)", "C) (-inf, 3]", "D) [3, 100]"], "answer": "B", "explanation": "'Greater than or equal to' includes 3, using bracket [3, inf)."},
-    {"level": "Medium (9/20)", "question": "Express 'x is strictly between -2 and 5 (not included)' in interval notation:", "options": ["A) [-2, 5]", "B) (-2, 5)", "C) [-2, 5)", "D) (-2, 5]"], "answer": "B", "explanation": "Strictly between without endpoints uses parentheses (-2, 5)."},
-    {"level": "Medium (10/20)", "question": "What algebraic operation creates a domain restriction in f(x) = 1/x?", "options": ["A) Division by zero", "B) Squaring negative numbers", "C) Adding positive numbers", "D) Multiplying by fractions"], "answer": "A", "explanation": "Denominator cannot be zero, so x != 0."},
-    {"level": "Hard (11/20)", "question": "In real numbers, what restriction applies to radical function f(x) = sqrt(x)?", "options": ["A) x must be negative", "B) Radicand must be non-negative (x >= 0)", "C) x != 1", "D) No restriction"], "answer": "B", "explanation": "Square root of negative numbers is not real, so x >= 0."},
-    {"level": "Hard (12/20)", "question": "What is the domain of f(x) = 7 / (x - 4)?", "options": ["A) All real numbers", "B) (-inf, 4) U (4, inf) or x != 4", "C) [4, inf)", "D) (-inf, 4]"], "answer": "B", "explanation": "Setting x - 4 = 0 gives x = 4 as excluded restriction."},
-    {"level": "Hard (13/20)", "question": "What is the domain of g(x) = sqrt(x - 3)?", "options": ["A) [3, inf)", "B) (3, inf)", "C) (-inf, 3]", "D) All real numbers"], "answer": "A", "explanation": "Solve x - 3 >= 0 -> x >= 3 -> [3, inf)."},
-    {"level": "Hard (14/20)", "question": "What is the range of quadratic function f(x) = x^2?", "options": ["A) (-inf, inf)", "B) [0, inf)", "C) (0, inf)", "D) [-1, inf)"], "answer": "B", "explanation": "Squaring any real number yields non-negative values [0, inf)."},
-    {"level": "Hard (15/20)", "question": "What is the range of f(x) = x^2 + 5?", "options": ["A) [0, inf)", "B) [5, inf)", "C) (5, inf)", "D) (-inf, 5]"], "answer": "B", "explanation": "Minimum value of x^2 is 0, so x^2 + 5 has minimum value 5: [5, inf)."},
-    {"level": "Master (16/20)", "question": "What is the domain of h(x) = 1 / sqrt(x - 2)?", "options": ["A) [2, inf)", "B) (2, inf)", "C) (-inf, 2)", "D) x != 2"], "answer": "B", "explanation": "x - 2 must be > 0 (strictly positive to avoid division by zero): (2, inf)."},
-    {"level": "Master (17/20)", "question": "What is the range of f(x) = |x - 4| - 3?", "options": ["A) [0, inf)", "B) [-3, inf)", "C) [-4, inf)", "D) (-inf, -3]"], "answer": "B", "explanation": "Minimum value of |x - 4| is 0, so minimum output is 0 - 3 = -3: [-3, inf)."},
-    {"level": "Master (18/20)", "question": "What is the domain of f(x) = (x + 2) / (x^2 - 9)?", "options": ["A) x != 3 and x != -3", "B) x != -2", "C) [3, inf)", "D) All real numbers"], "answer": "A", "explanation": "Denominator x^2 - 9 = 0 at x = 3 and x = -3."},
-    {"level": "Master (19/20)", "question": "What is the range of inverted parabola f(x) = -x^2 + 4?", "options": ["A) [4, inf)", "B) (-inf, 4]", "C) (-inf, inf)", "D) [0, 4]"], "answer": "B", "explanation": "Parabola opens downward with vertex peak at y = 4: (-inf, 4]."},
-    {"level": "Master (20/20)", "question": "What is the domain of logarithmic function f(x) = ln(x + 1)?", "options": ["A) (-1, inf)", "B) [-1, inf)", "C) (0, inf)", "D) All real numbers"], "answer": "A", "explanation": "Argument of log must be positive: x + 1 > 0 -> x > -1 -> (-1, inf)."}
-]
-
-STAGES = [
-    {"name": "Room 1: The Lock of Relations and Functions", "questions": ROOM_1_QUESTIONS},
-    {"name": "Room 2: The Vault of Function Types", "questions": ROOM_2_QUESTIONS},
-    {"name": "Room 3: The Sanctuary of Domain and Range", "questions": ROOM_3_QUESTIONS}
-]
-
-# --- SESSION STATE INITIALIZATION ---
-if "game_started" not in st.session_state:
-    st.session_state.game_started = False
-if "current_room" not in st.session_state:
-    st.session_state.current_room = 0
-if "q_index" not in st.session_state:
-    st.session_state.q_index = 0
-if "score" not in st.session_state:
-    st.session_state.score = 0
+# Session State Initialization
 if "start_time" not in st.session_state:
-    st.session_state.start_time = 0
-if "answered" not in st.session_state:
-    st.session_state.answered = False
-if "user_choice" not in st.session_state:
-    st.session_state.user_choice = None
+    st.session_state.start_time = time.time()
+if "stage" not in st.session_state:
+    st.session_state.stage = 1
+if "stage1_passed" not in st.session_state:
+    st.session_state.stage1_passed = False
+if "stage2_passed" not in st.session_state:
+    st.session_state.stage2_passed = False
+if "stage3_passed" not in st.session_state:
+    st.session_state.stage3_passed = False
 
-# --- UI HEADER ---
-st.title("ESCAPE ROOM: GENERAL MATH QUEST")
-st.caption("Master of Functions Challenge")
-st.divider()
+# Sidebar Controls
+st.sidebar.title("Mission Control")
 
-# --- START SCREEN ---
-if not st.session_state.game_started:
-    st.subheader("Mission Briefing")
-    st.write("You are trapped in the Function Complex. To escape, you must solve door lock codes across 3 rooms.")
-    st.markdown("""
-    - **Requirement:** Score at least **17 out of 20** to unlock each door.
-    - **Difficulty:** Code lock mechanisms scale from Level 1 to Level 20.
-    - **Bonus Voucher:** Complete all 3 rooms in under 40 minutes to claim your +1 Quiz Bonus code!
-    """)
-    if st.button("Start Timer & Begin Escape Room", type="primary"):
-        st.session_state.game_started = True
-        st.session_state.start_time = time.time()
-        st.rerun()
+# Background Audio Player
+if os.path.exists("bgm.mp3"):
+    st.sidebar.subheader("Audio Controls")
+    st.sidebar.audio("bgm.mp3", loop=True)
 
+# Live Timer Tracker
+elapsed_sec = int(time.time() - st.session_state.start_time)
+mins, secs = divmod(elapsed_sec, 60)
+st.sidebar.metric(label="Elapsed Time", value=f"{mins:02d}:{secs:02d}")
+
+if elapsed_sec <= 2400:
+    st.sidebar.info("Bonus Incentive Active: Complete in under 40:00 for +1 Quiz Score.")
 else:
-    load_bgm()
-    room_idx = st.session_state.current_room
+    st.sidebar.warning("40-Minute Bonus Time Expired.")
 
-    if room_idx < len(STAGES):
-        current_stage = STAGES[room_idx]
-        questions = current_stage["questions"]
-        q_idx = st.session_state.q_index
-        q_data = questions[q_idx]
+st.sidebar.markdown("---")
+st.sidebar.markdown(f"**Current Stage:** Room {st.session_state.stage} of 3")
+st.sidebar.markdown("**Mastery Threshold:** 17 / 20 correct answers per stage.")
 
-        st.subheader(f"{current_stage['name']}")
-        st.progress((q_idx + 1) / 20, text=f"Door Lock Mechanism {q_idx + 1} of 20")
+# Main Title Display
+st.markdown("""
+    <div class="title-banner">
+        <div class="main-title">Over the Borderline</div>
+        <div class="sub-title">Domain and Range Escape Room</div>
+    </div>
+""", unsafe_allow_html=True)
 
-        col1, col2 = st.columns(2)
-        col1.markdown(f"**Difficulty:** {q_data['level']}")
-        col2.markdown(f"**Current Room Score:** {st.session_state.score}/{q_idx}")
-        st.divider()
+# Question Data Bank (60 Questions Total)
+questions_stage1 = [
+    {"q": "1. Is the set of ordered pairs {(1,2), (2,3), (3,4), (4,5)} a function?", "opts": ["Yes", "No"], "a": "Yes"},
+    {"q": "2. Is the relation {(1,2), (1,3), (2,4)} a function?", "opts": ["Yes", "No"], "a": "No"},
+    {"q": "3. What is the domain of {(2,5), (3,7), (4,9)}?", "opts": ["{2, 3, 4}", "{5, 7, 9}", "{2, 5}"], "a": "{2, 3, 4}"},
+    {"q": "4. What is the range of {(2,5), (3,7), (4,9)}?", "opts": ["{2, 3, 4}", "{5, 7, 9}", "{5, 9}"], "a": "{5, 7, 9}"},
+    {"q": "5. A test used to determine if a graph represents a function is the...", "opts": ["Vertical Line Test", "Horizontal Line Test", "Diagonal Line Test"], "a": "Vertical Line Test"},
+    {"q": "6. In the function f(x) = 3x + 2, the input variable x represents the...", "opts": ["Independent Variable", "Dependent Variable", "Constant"], "a": "Independent Variable"},
+    {"q": "7. Domain of {(0,1), (0,2), (0,3)} is:", "opts": ["{0}", "{1, 2, 3}", "{0, 1, 2, 3}"], "a": "{0}"},
+    {"q": "8. Range of {(-1,4), (0,4), (1,4)} is:", "opts": ["{-1, 0, 1}", "{4}", "{-1, 4}"], "a": "{4}"},
+    {"q": "9. Does a vertical line graph represent a function?", "opts": ["Yes", "No"], "a": "No"},
+    {"q": "10. Does a horizontal line graph represent a function?", "opts": ["Yes", "No"], "a": "Yes"},
+    {"q": "11. If f(x) = 2x - 5, what is f(3)?", "opts": ["1", "3", "11"], "a": "1"},
+    {"q": "12. What is the domain of any linear function f(x) = mx + b?", "opts": ["All Real Numbers", "x >= 0", "x > 0"], "a": "All Real Numbers"},
+    {"q": "13. In a mapping diagram, if one input points to two outputs, the relation is...", "opts": ["Not a function", "A function", "Linear"], "a": "Not a function"},
+    {"q": "14. Set of input values for a relation is called...", "opts": ["Domain", "Range", "Codomain"], "a": "Domain"},
+    {"q": "15. Set of output values for a relation is called...", "opts": ["Range", "Domain", "Relation"], "a": "Range"},
+    {"q": "16. Is y = x^2 a function?", "opts": ["Yes", "No"], "a": "Yes"},
+    {"q": "17. Is x = y^2 a function?", "opts": ["Yes", "No"], "a": "No"},
+    {"q": "18. Evaluate f(-2) for f(x) = x + 7.", "opts": ["5", "9", "-5"], "a": "5"},
+    {"q": "19. Evaluate f(0) for f(x) = -4x + 10.", "opts": ["10", "0", "-4"], "a": "10"},
+    {"q": "20. The graph of a circle represents a function.", "opts": ["False", "True"], "a": "False"}
+]
 
-        st.write(f"**Question {q_idx + 1}:** {q_data['question']}")
+questions_stage2 = [
+    {"q": "1. What is the domain of f(x) = 1 / x?", "opts": ["x != 0", "All Real Numbers", "x > 0"], "a": "x != 0"},
+    {"q": "2. What is the domain of f(x) = sqrt(x)?", "opts": ["x >= 0", "All Real Numbers", "x > 0"], "a": "x >= 0"},
+    {"q": "3. What is the range of f(x) = x^2?", "opts": ["y >= 0", "All Real Numbers", "y > 0"], "a": "y >= 0"},
+    {"q": "4. What is the domain of f(x) = 1 / (x - 3)?", "opts": ["x != 3", "x != -3", "x > 3"], "a": "x != 3"},
+    {"q": "5. What is the domain of f(x) = sqrt(x - 5)?", "opts": ["x >= 5", "x >= 0", "x > 5"], "a": "x >= 5"},
+    {"q": "6. Range of f(x) = |x| is:", "opts": ["y >= 0", "All Real Numbers", "y <= 0"], "a": "y >= 0"},
+    {"q": "7. Domain of f(x) = (x + 2) / (x^2 - 4) excludes:", "opts": ["x = 2 and x = -2", "x = 2 only", "x = 0"], "a": "x = 2 and x = -2"},
+    {"q": "8. Range of f(x) = x^2 + 4 is:", "opts": ["y >= 4", "y >= 0", "All Real Numbers"], "a": "y >= 4"},
+    {"q": "9. Range of f(x) = -x^2 is:", "opts": ["y <= 0", "y >= 0", "All Real Numbers"], "a": "y <= 0"},
+    {"q": "10. Domain of f(x) = 5 / (2x - 8) is:", "opts": ["x != 4", "x != 8", "x != 2"], "a": "x != 4"},
+    {"q": "11. Domain of f(x) = sqrt(2x + 6) is:", "opts": ["x >= -3", "x >= 3", "x >= 0"], "a": "x >= -3"},
+    {"q": "12. Domain of a polynomial function is always:", "opts": ["All Real Numbers", "x > 0", "x != 0"], "a": "All Real Numbers"},
+    {"q": "13. What is the restriction for rational function domains?", "opts": ["Denominator != 0", "Radicand >= 0", "Numerator != 0"], "a": "Denominator != 0"},
+    {"q": "14. Range of f(x) = 3x - 1 is:", "opts": ["All Real Numbers", "y >= 0", "y != 0"], "a": "All Real Numbers"},
+    {"q": "15. Domain of f(x) = 1 / (x^2 + 1) is:", "opts": ["All Real Numbers", "x != -1", "x != 1"], "a": "All Real Numbers"},
+    {"q": "16. Range of f(x) = -|x| + 2 is:", "opts": ["y <= 2", "y >= 2", "y <= 0"], "a": "y <= 2"},
+    {"q": "17. Domain of f(x) = sqrt(4 - x) is:", "opts": ["x <= 4", "x >= 4", "x >= 0"], "a": "x <= 4"},
+    {"q": "18. What is the horizontal asymptote of f(x) = 1 / x?", "opts": ["y = 0", "x = 0", "y = 1"], "a": "y = 0"},
+    {"q": "19. What is the vertical asymptote of f(x) = 1 / (x + 1)?", "opts": ["x = -1", "x = 1", "y = -1"], "a": "x = -1"},
+    {"q": "20. Range of f(x) = (x - 1)^2 - 3 is:", "opts": ["y >= -3", "y >= 1", "y >= 0"], "a": "y >= -3"}
+]
 
-        choice = st.radio("Select your door code entry:", q_data["options"], key=f"q_{room_idx}_{q_idx}")
+questions_stage3 = [
+    {"q": "1. A store sells items for 5 dollars each. Domain for number of items sold x is:", "opts": ["Non-negative Integers", "All Real Numbers", "x <= 0"], "a": "Non-negative Integers"},
+    {"q": "2. Height of a ball dropped from 100 ft: h(t) = -16t^2 + 100. Domain contextually represents:", "opts": ["Time until ball hits ground", "All Real Numbers", "Negative Time"], "a": "Time until ball hits ground"},
+    {"q": "3. Piecewise function: f(x) = x for x < 0, and f(x) = 2x for x >= 0. Domain is:", "opts": ["All Real Numbers", "x >= 0", "x < 0"], "a": "All Real Numbers"},
+    {"q": "4. Range of f(x) = 2^x is:", "opts": ["y > 0", "y >= 0", "All Real Numbers"], "a": "y > 0"},
+    {"q": "5. Domain of f(x) = log(x) is:", "opts": ["x > 0", "x >= 0", "All Real Numbers"], "a": "x > 0"},
+    {"q": "6. A car travels at 60 mph for 3 hours. Distance d(t) = 60t. Domain for t is:", "opts": ["[0, 3]", "All Real Numbers", "t >= 60"], "a": "[0, 3]"},
+    {"q": "7. Range for distance d(t) = 60t where t is in [0, 3]:", "opts": ["[0, 180]", "[0, 60]", "All Real Numbers"], "a": "[0, 180]"},
+    {"q": "8. What is the domain of f(x) = 1 / sqrt(x)?", "opts": ["x > 0", "x >= 0", "x != 0"], "a": "x > 0"},
+    {"q": "9. If range of f(x) is y >= 2, range of f(x) + 3 is:", "opts": ["y >= 5", "y >= 2", "y >= 3"], "a": "y >= 5"},
+    {"q": "10. Domain of f(x) = sqrt(x^2 - 9) is:", "opts": ["x <= -3 or x >= 3", "-3 <= x <= 3", "x >= 3"], "a": "x <= -3 or x >= 3"},
+    {"q": "11. Range of constant function f(x) = 7 is:", "opts": ["{7}", "All Real Numbers", "y >= 7"], "a": "{7}"},
+    {"q": "12. Maximum point of parabola with range y <= 5 is at y = ...", "opts": ["5", "0", "-5"], "a": "5"},
+    {"q": "13. In a real-world scenario, can area of a square have a negative domain?", "opts": ["No", "Yes"], "a": "No"},
+    {"q": "14. Domain of f(x) = (x - 1)/(x^2 - 1) is:", "opts": ["x != 1 and x != -1", "x != 1 only", "All Real Numbers"], "a": "x != 1 and x != -1"},
+    {"q": "15. What is the range of f(x) = sin(x)?", "opts": ["[-1, 1]", "[0, 1]", "All Real Numbers"], "a": "[-1, 1]"},
+    {"q": "16. What is the range of f(x) = cos(x) + 2?", "opts": ["[1, 3]", "[0, 2]", "[-1, 1]"], "a": "[1, 3]"},
+    {"q": "17. Domain of composite relation where inner function is undefined at x=2:", "opts": ["Excludes x = 2", "Includes x = 2", "All Real Numbers"], "a": "Excludes x = 2"},
+    {"q": "18. Step function f(x) = floor(x) has a range of:", "opts": ["All Integers", "All Real Numbers", "Positive Numbers"], "a": "All Integers"},
+    {"q": "19. If domain of f(x) is [0, 10], domain of f(x - 2) is:", "opts": ["[2, 12]", "[-2, 8]", "[0, 10]"], "a": "[2, 12]"},
+    {"q": "20. Final Escape Lock: If domain is [0, infinity) and range is (-infinity, 0], graph sits in Quadrant:", "opts": ["IV", "I", "II"], "a": "IV"}
+]
 
-        if not st.session_state.answered:
-            if st.button("Submit Answer", type="primary"):
-                st.session_state.user_choice = choice[0]
-                st.session_state.answered = True
-                if choice[0] == q_data["answer"]:
-                    st.session_state.score += 1
-                st.rerun()
-        else:
-            if st.session_state.user_choice == q_data["answer"]:
-                st.success(f"[CORRECT] Lock tumbler engaged! Correct answer: {q_data['answer']}")
+# Room Rendering Logic
+def render_stage(stage_num, question_set, state_flag):
+    st.header(f"STAGE {stage_num}: ESCAPE ROOM GATEWAY")
+    st.write("Answer the 20 questions below. Score at least 17/20 to unlock the gate.")
+    
+    user_answers = []
+    with st.form(f"stage_{stage_num}_form"):
+        for idx, q in enumerate(question_set):
+            ans = st.radio(q["q"], q["opts"], key=f"s{stage_num}_q{idx}")
+            user_answers.append((ans, q["a"]))
+        
+        submitted = st.form_submit_button(f"Submit Stage {stage_num} Answers")
+        
+        if submitted:
+            score = sum(1 for user_a, correct_a in user_answers if user_a == correct_a)
+            st.write(f"**Your Score:** {score} / 20")
+            st.progress(score / 20)
+            
+            if score >= 17:
+                st.session_state[state_flag] = True
+                st.success(f"STAGE {stage_num} CLEARED! Gate unlocked.")
+                if stage_num < 3:
+                    st.session_state.stage = stage_num + 1
+                    st.rerun()
             else:
-                st.error(f"[INCORRECT] Lock failed! Correct answer was: {q_data['answer']}")
-                st.info(f"Hint: {q_data['explanation']}")
+                st.error(f"Mastery Threshold Not Met (17/20 required). Review your answers and try again.")
 
-            if st.button("Next Question"):
-                st.session_state.answered = False
-                if q_idx + 1 < len(questions):
-                    st.session_state.q_index += 1
-                else:
-                    # END OF ROOM EVALUATION
-                    final_score = st.session_state.score
-                    if final_score >= 17:
-                        st.session_state.current_room += 1
-                        st.session_state.q_index = 0
-                        st.session_state.score = 0
-                    else:
-                        st.session_state.q_index = 0
-                        st.session_state.score = 0
-                st.rerun()
+# Stage Controller
+if st.session_state.stage == 1:
+    render_stage(1, questions_stage1, "stage1_passed")
 
+elif st.session_state.stage == 2:
+    if not st.session_state.stage1_passed:
+        st.warning("You must complete Stage 1 first!")
+        st.session_state.stage = 1
+        st.rerun()
     else:
-        # ALL ROOMS COMPLETED
-        total_minutes = (time.time() - st.session_state.start_time) / 60
-        st.balloons()
-        st.success("[ESCAPE SUCCESSFUL] YOU HAVE FREED YOURSELF FROM ALL ROOMS!")
-        st.write(f"**Total Escape Time:** {total_minutes:.2f} minutes")
-        st.divider()
+        render_stage(2, questions_stage2, "stage2_passed")
 
-        if total_minutes <= 40.0:
-            st.subheader("=== BONUS VOUCHER UNLOCKED ===")
-            st.write("You escaped all 3 rooms in under 40 minutes!")
-            st.code("+1-QUIZ-BONUS-MASTER", language="text")
-            st.write("Present this voucher code to your GenMath teacher to claim +1 on your next quiz!")
-        else:
-            st.info("Time exceeded 40 minutes. No bonus voucher granted, but successfully escaped!")
+elif st.session_state.stage == 3:
+    if not st.session_state.stage2_passed:
+        st.warning("You must complete Stage 2 first!")
+        st.session_state.stage = 2
+        st.rerun()
+    else:
+        render_stage(3, questions_stage3, "stage3_passed")
 
-        if st.button("Play Again"):
-            st.session_state.game_started = False
-            st.session_state.current_room = 0
-            st.session_state.q_index = 0
-            st.session_state.score = 0
-            st.rerun()
+# Final Victory Screen
+if st.session_state.stage3_passed:
+    st.balloons()
+    total_time = int(time.time() - st.session_state.start_time)
+    final_mins, final_secs = divmod(total_time, 60)
+    
+    st.markdown("""
+        <div style="text-align: center; border: 3px solid #00ffcc; padding: 30px; border-radius: 20px; background: rgba(0,255,204,0.1);">
+            <h1 style="color: #00ffcc;">ESCAPE SUCCESSFUL!</h1>
+            <h3>You have mastered Domain, Range, and Functions!</h3>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.write(f"**Total Completion Time:** {final_mins} minutes and {final_secs} seconds.")
+    
+    if total_time <= 2400:
+        st.success("BONUS EARNED: Sub-40 Minute Completion! Show this screen to your teacher for +1 Quiz Score Bonus.")
+    else:
+        st.info("Completed successfully! (Over 40 minutes - Bonus incentive target missed).")
